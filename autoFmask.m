@@ -1,4 +1,5 @@
 function clr_pct = autoFmask(varargin)
+global filepath_work;
 % AUTOFMASK Automatedly detect clouds, cloud shadows, snow, and water for
 %     Landsats 4-7 TM/EMT+, Landsat 8 OLI/TIRS, and Sentinel 2 MSI images.
 %
@@ -44,29 +45,48 @@ function clr_pct = autoFmask(varargin)
 %     clr_pct = autoFmask('p',20) forces cloud probablity thershold as 20.
 %     clr_pct = autoFmask('e',500) forces erosion radius for Potential False Positive Cloud as 500 meters to remove the large commission errors.
 %
-%        
+%
 % Author:  Shi Qiu (shi.qiu@uconn.com)
 % Last Date: May 15, 2019
 
-    tic
+tic
+
+
+
+path_data=pwd;
+
+
+
+%% get parameters from inputs
+p = inputParser;
+p.FunctionName = 'FmaskParas';
+% optional
+% default values.
+addParameter(p,'cloud',3);
+addParameter(p,'shadow',3);
+addParameter(p,'snow',0);
+
+%% read info from .xml.
+[sensor,~,InputFile,main_meta] = LoadSensorType(path_data);
+if isempty(sensor)
+    error('%s works only for Landsats 4-7, Landsat 8, and Sentinel 2 images.\n',fmask_soft_name);
+end
+
+TileName = regexp(main_meta.name, '\T\d{2}\w{3}', 'match', 'once');
+D = regexp( main_meta.name, '\d{8}', 'match', 'once' );
+aDate = datenum(D, 'yyyymmdd');
+vekdate = datevec(aDate);
+
+% fmask_output=fullfile(path_data,data_meta.Output,[fmask_name,'.tif']);
+TileDir = [filepath_work '\' TileName ];
+datefname = [num2str(vekdate(1)) num2str(vekdate(2), '%02d'), num2str(vekdate(3), '%02d') ];
+outputfbase = [TileName '_' datefname];
+
+fmask_output = [TileDir '\' outputfbase '_FMask.png'];
+if( exist( fmask_output, 'file')  == 0)
+    
     fmask_soft_name='Fmask 4.0';
     fprintf('%s start ...\n',fmask_soft_name);
-    path_data=pwd;
-    
-    %% get parameters from inputs
-    p = inputParser;
-    p.FunctionName = 'FmaskParas';
-    % optional
-    % default values.
-    addParameter(p,'cloud',3);
-    addParameter(p,'shadow',3);
-    addParameter(p,'snow',0);
- 
-    %% read info from .xml.
-    [sensor,~,InputFile,main_meta] = LoadSensorType(path_data);
-    if isempty(sensor)
-        error('%s works only for Landsats 4-7, Landsat 8, and Sentinel 2 images.\n',fmask_soft_name);
-    end
     
     default_paras = FmaskParameters(sensor);
     tpw = default_paras.ThinWeight;
@@ -96,16 +116,17 @@ function clr_pct = autoFmask(varargin)
     fprintf('Load or calculate TOA reflectances.\n');
     
     %% load data
-    [data_meta,data_toabt,angles_view,trgt] = LoadData(path_data,sensor,InputFile,main_meta);
-    clear InputFile norMTL;
-        
+    resolu = [20 20];
+    [data_meta,data_toabt,angles_view,trgt] = LoadData(path_data,sensor,InputFile,main_meta, resolu);
+    % clear InputFile norMTL;
+    
     if isempty(userdem)
         % default DEM
         [dem,slope,aspect,water_occur] = LoadAuxiData(fullfile(path_data,data_meta.Output),data_meta.Name,data_meta.BBox,trgt,false); % true false
     else
         [dem,slope,aspect,water_occur] = LoadAuxiData(fullfile(path_data,data_meta.Output),data_meta.Name,data_meta.BBox,trgt,false,'userdem',userdem); % true false
     end
-
+    
     fprintf('Detect potential clouds, cloud shadows, snow, and water.\n');
     
     %% public data
@@ -122,19 +143,20 @@ function clr_pct = autoFmask(varargin)
     ndvi = NDVI(data_toabt.BandRed, data_toabt.BandNIR);
     ndsi = NDSI(data_toabt.BandGreen, data_toabt.BandSWIR1);
     cdi = CDI(data_toabt.BandVRE3,data_toabt.BandNIR8,data_toabt.BandNIR);%  band 7, 8, AND 8a
-
+    
     data_toabt.BandVRE3 = [];
     data_toabt.BandNIR8 = [];
-
+    
+    
     % Statured Visible Bands
     satu_Bv = Saturate(data_toabt.SatuBlue, data_toabt.SatuGreen, data_toabt.SatuRed);
     data_toabt.SatuBlue = [];
     
     %% select potential cloud pixels (PCPs)
-     % inputs: BandSWIR2 BandBT BandBlue BandGreen BandRed BandNIR BandSWIR1
+    % inputs: BandSWIR2 BandBT BandBlue BandGreen BandRed BandNIR BandSWIR1
     % BandCirrus
-%     [idplcd,BandCirrusNormal,whiteness,HOT] = DetectPotentialPixels(mask,data_toabt,dem,ndvi,ndsi,satu_Bv);
-   
+    %     [idplcd,BandCirrusNormal,whiteness,HOT] = DetectPotentialPixels(mask,data_toabt,dem,ndvi,ndsi,satu_Bv);
+    
     %% detect snow
     psnow = DetectSnow(data_meta.Dim, data_toabt.BandGreen, data_toabt.BandNIR, data_toabt.BandBT, ndsi);
     
@@ -143,22 +165,22 @@ function clr_pct = autoFmask(varargin)
     clear water_occur;
     
     [idplcd,BandCirrusNormal,whiteness,HOT] = DetectPotentialPixels(mask,data_toabt,dem,ndvi,ndsi,satu_Bv);
-
+    
     data_toabt.BandBlue = [];
     data_toabt.BandRed = [];
     data_toabt.BandSWIR2 = [];
     clear satu_Bv;
     data_toabt.BandCirrus = BandCirrusNormal; %refresh Cirrus band.
     clear BandCirrusNormal;
-
+    
     %% select pure snow/ice pixels.
     abs_snow = DetectAbsSnow(data_toabt.BandGreen,data_toabt.SatuGreen,ndsi,psnow,data_meta.Resolution(1));
-
+    
     if ~isnan(abs_snow)
         idplcd(abs_snow==1)=0; clear abs_snow; % remove pure snow/ice pixels from all PCPs.
     end
-
-    %% detect potential cloud 
+    
+    %% detect potential cloud
     ndbi = NDBI(data_toabt.BandNIR, data_toabt.BandSWIR1);
     
     % inputs: BandCirrus BandBT BandSWIR1 SatuGreen SatuRed
@@ -171,7 +193,7 @@ function clr_pct = autoFmask(varargin)
     
     %% detect potential flase positive cloud layer, including urban, coastline, and snow/ice.
     pfpl = DetectPotentialFalsePositivePixels(mask, psnow, slope, ndbi, ndvi, data_toabt.BandBT,cdi, water,data_meta.Resolution(1));
-
+    
     clear ndbi ndvi;
     %% remove most of commission errors from urban, bright rock, and coastline.
     pcloud = ErodeCommissons(data_meta,pcloud_all,pfpl,water,cdi,erdpix);
@@ -180,7 +202,7 @@ function clr_pct = autoFmask(varargin)
     %% detect cloud shadow
     cs_final = zeros(data_meta.Dim,'uint8');  % final masks, including cloud, cloud shadow, snow, and water.
     cs_final(water==1)=1; %water is fistly stacked because of its always lowest prioty.
-
+    
     % note that 0.1% Landsat obersavtion is about 40,000 pixels, which will be used in the next statistic analyses.
     % when potential cloud cover less than 0.1%, directly screen all PCPs out.
     if sum_clr <= 40000
@@ -192,8 +214,8 @@ function clr_pct = autoFmask(varargin)
         fprintf('Match cloud shadows with clouds.\n');
         % detect potential cloud shadow
         pshadow = DetectPotentialCloudShadow(data_meta, data_toabt.BandNIR,data_toabt.BandSWIR1,idlnd,mask,...
-        slope,aspect);
-    
+            slope,aspect);
+        
         data_toabt.BandNIR = [];
         data_toabt.BandSWIR1 = [];
         
@@ -201,14 +223,14 @@ function clr_pct = autoFmask(varargin)
         clear data_toabt;
         % match cloud shadow, and return clouds and cloud shadows.
         [ ~,pcloud, pshadow] = MatchCloudShadow(...
-        mask,pcloud,pshadow,pfpl,water, dem ,data_bt_c,t_templ,t_temph,data_meta,sum_clr,14,angles_view);
-   
+            mask,pcloud,pshadow,pfpl,water, dem ,data_bt_c,t_templ,t_temph,data_meta,sum_clr,14,angles_view);
+        
         % make buffer for final masks.
         % the called cloud indicate those clouds are have highest piroity.
         % This is final cloud!
         [pcloud,pshadow,psnow] = BufferMasks(pcloud,cldpix,pshadow,sdpix,psnow,snpix);
     end
-    %% stack results together. 
+    %% stack results together.
     % step 1 snow or unknow
     cs_final(psnow==1)=3; % snow
     % step 2 shadow above snow and everyting
@@ -220,16 +242,57 @@ function clr_pct = autoFmask(varargin)
     
     % clear pixels percentage
     clr_pct=100*(1-sum(pcloud(:))/sum(mask(:)));
-
+    
     %% output as geotiff.
     trgt.Z=cs_final;
     fmask_name=[data_meta.Name,'_Fmask4'];
     trgt.name=fmask_name;
- 
-    fmask_output=fullfile(path_data,data_meta.Output,[fmask_name,'.tif']);
-    GRIDobj2geotiff(trgt,fmask_output);
-	time=toc;
+    %     trgt.size = 2*trgt.size;
+    %     trgt.Z = imresize( trgt.Z, 2, 'nearest' );
+    
+    % TileName = regexp(main_meta.name, '\T\d{2}\w{3}', 'match', 'once');
+    % D = regexp( main_meta.name, '\d{8}', 'match', 'once' );
+    % aDate = datenum(D, 'yyyymmdd');
+    % vekdate = datevec(aDate);
+    %
+    % fmask_output=fullfile(path_data,data_meta.Output,[fmask_name,'.tif']);
+    % TileDir = [filepath_work '\' TileName ];
+    % datefname = [num2str(vekdate(1)) num2str(vekdate(2), '%02d'), num2str(vekdate(3), '%02d') ];
+    % outputfbase = [TileName '_' datefname];
+    % fmask_output = fullfile( filepath_work, Folder, [main_meta.name '_FMask.tif']);
+    fmask_output = [TileDir '\' outputfbase '_FMask.png'];
+    if( exist( TileDir)  ~= 7)
+        mkdir( TileDir );
+    end
+    % GRIDobj2geotiff(trgt,fmask_output);
+    imwrite( trgt.Z, fmask_output); % Ayrý formatta png olarak yazdýrma.
+    
+    resolu = [10 10];
+    [data_meta,data_toabt,angles_view,trgt] = LoadData(path_data,sensor,InputFile,main_meta, resolu);
+    
+    MSFileName = [TileDir '\' outputfbase '.tif'];
+    MS4(:,:,1) = data_toabt.BandBlue;
+    MS4(:,:,2) = data_toabt.BandGreen;
+    MS4(:,:,3) = data_toabt.BandRed;
+    MS4(:,:,4) = data_toabt.BandNIR;
+    trgt.Z = uint16(MS4);
+    GRIDobj2geotiff(trgt,MSFileName);
+    
+    RGB(:,:,1) = ( 255*imadjust( mat2gray( MS4(:,:,3) )));
+    RGB(:,:,2) = ( 255*imadjust( mat2gray( MS4(:,:,2) )));
+    RGB(:,:,3) = ( 255*imadjust( mat2gray( MS4(:,:,1) )));
+    
+    imwrite( uint8(RGB), [TileDir '\' outputfbase '_RGB.jpg']);
+    
+    NRG(:,:,1) = ( 255*imadjust( mat2gray( MS4(:,:,4) )));
+    NRG(:,:,2) = ( 255*imadjust( mat2gray( MS4(:,:,3) )));
+    NRG(:,:,3) = ( 255*imadjust( mat2gray( MS4(:,:,2) )));
+    
+    imwrite( uint8(NRG), [TileDir '\' outputfbase '_NRG.jpg']);
+    
+    time=toc;
     time=time/60;
     fprintf('%s finished (%.2f minutes)\nfor %s with %.2f%% clear pixels\n\n',...
         fmask_soft_name,time,data_meta.Name,clr_pct);
+end
 end

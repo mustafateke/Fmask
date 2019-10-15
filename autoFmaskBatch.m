@@ -1,4 +1,5 @@
 function autoFmaskBatch()
+global filepath_work;
 % This can automatically find all Landsats 4-8 and Sentinel-2 images
 % (folder) and to process them one by one.
 
