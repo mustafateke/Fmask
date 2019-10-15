@@ -48,11 +48,13 @@ end
 
 % try to use geotiffwrite, which comes with the Mapping Toolbox
 try
-    if isempty(A.georef);
+    tagstruct.Compression = Tiff.Compression.Deflate;
+    if isempty(A.georef)
         geotiffwrite(file,A.Z,A.refmat);
+%         geotiffwrite(file,A.Z,A.refmat, 'Compression', Tiff.Compression.LZW);
     else
         geotiffwrite(file,A.Z,A.georef.SpatialRef,...
-            'GeoKeyDirectoryTag',A.georef.GeoKeyDirectoryTag);
+            'GeoKeyDirectoryTag',A.georef.GeoKeyDirectoryTag, 'TiffTags', tagstruct);
     end
 catch ME
     warning('TopoToolbox:GRIDobj',...
@@ -102,7 +104,7 @@ catch ME
     tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
     tagstruct.Software = 'MATLAB';
     tagstruct.Photometric = 0;
-    
+    tagstruct.Compression = Tiff.Compression.LZW;
     t.setTag(tagstruct);
     t.write(A);
     t.close;
