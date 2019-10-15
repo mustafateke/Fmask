@@ -1,4 +1,4 @@
-function [im_th,TOAref,trgt,ijdim_ref,bbox,ul,zen,azi,zc,Angles2,B1Satu,B2Satu,B3Satu,resolu]=nd2toarbt_msi2(im)
+function [im_th,TOAref,trgt,ijdim_ref,bbox,ul,zen,azi,zc,Angles2,B1Satu,B2Satu,B3Satu,resolu]=nd2toarbt_msi(im, resolu)
 % read TOA refs function derived from Fmask 3.3 for Sentinel 2.
 % Revisions:
 % Use REF vs. DN instead of RAD vs. DN (Zhe 06/20/2013)
@@ -48,11 +48,12 @@ function [im_th,TOAref,trgt,ijdim_ref,bbox,ul,zen,azi,zc,Angles2,B1Satu,B2Satu,B
     clear Angles;
 
     %% output resolution of Fmask 20meters for Sentinel 2 images
-    resolu = [20 20] ;
+%     resolu = [20 20] ;
+%     resolu = [10 10] ; % Set Output to 10 meters; MT
     %%
     ijdim_ref = (MSIinfo.GeoInfo.Size.R10) *10 ./ resolu ;
 
-    ul  = [MSIinfo.GeoInfo.Xstart.R10 MSIinfo.GeoInfo.Ystart.R10] + [resolu(1)/2 0-resolu(2)/2]; % the center of the top-left pixel.
+    ul  = [MSIinfo.GeoInfo.Xstart.R10 MSIinfo.GeoInfo.Ystart.R10] + [resolu(1) 0-resolu(2)]; % the center of the top-left pixel.
     zen = MSIinfo.Angles.Mean.SZA ;
     azi = MSIinfo.Angles.Mean.SAA ;
 

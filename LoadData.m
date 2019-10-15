@@ -1,4 +1,4 @@
-function [data_meta,data_toabt,angles_view,trgt] = LoadData(path_data,sensor,InputFile,main_meta)
+function [data_meta,data_toabt,angles_view,trgt] = LoadData(path_data,sensor,InputFile,main_meta, resolu)
 %LOADDATA Read all used bands and metadata for Landsats 4-8 and Sentinel 2.
 %
 % Syntax
@@ -45,7 +45,8 @@ function [data_meta,data_toabt,angles_view,trgt] = LoadData(path_data,sensor,Inp
         
 %         fprintf('Load TOA reflectances from the Level-1C product.\n');
         % Load data for Sentinel 2
-        [~,data,trgt,dim,bbox,ul,zen,azi,zc,Angles,satu_B1,satu_B2,satu_B3,resolu]=nd2toarbt_msi(InputFile);
+%         resolu = [20 20] ;
+        [~,data,trgt,dim,bbox,ul,zen,azi,zc,Angles,satu_B1,satu_B2,satu_B3,resolu]=nd2toarbt_msi(InputFile, resolu);
         %% Input data class defination
         data_meta=ObjMeta;
         data_toabt=ObjTOABT;
