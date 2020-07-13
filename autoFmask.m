@@ -52,12 +52,12 @@ global filepath_work;
 tic
 
 
-if(nargin > 0)
-    path_data=varargin{2};
-else
-    path_data=pwd;
-end
-
+% if(nargin > 0)
+%     path_data=varargin{2};
+% else
+%     path_data=pwd;
+% end
+path_data=varargin{2};
 
 
 %% get parameters from inputs
@@ -100,6 +100,7 @@ if( exist( fmask_output, 'file')  == 0)
     % user's path for DEM
     addParameter(p,'udem','');
     addParameter(p,'path','');
+    addParameter(p,'path_data','');
     % request user's input
     parse(p,varargin{:});
     resolution=p.Results.resolution;
