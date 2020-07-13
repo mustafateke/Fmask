@@ -52,8 +52,11 @@ global filepath_work;
 tic
 
 
-
-path_data=pwd;
+if(nargin > 0)
+    path_data=varargin{2};
+else
+    path_data=pwd;
+end
 
 
 
@@ -96,7 +99,7 @@ if( exist( fmask_output, 'file')  == 0)
     
     % user's path for DEM
     addParameter(p,'udem','');
-    
+    addParameter(p,'path','');
     % request user's input
     parse(p,varargin{:});
     resolution=p.Results.resolution;
@@ -274,21 +277,68 @@ if( exist( fmask_output, 'file')  == 0)
     MS4(:,:,1) = data_toabt.BandBlue;
     MS4(:,:,2) = data_toabt.BandGreen;
     MS4(:,:,3) = data_toabt.BandRed;
-    MS4(:,:,4) = data_toabt.BandNIR;
+    MS4(:,:,4) = data_toabt.BandNIR; %8a is also used.
     trgt.Z = uint16(MS4);
     GRIDobj2geotiff(trgt,MSFileName);
     
-    RGB(:,:,1) = ( 255*imadjust( mat2gray( MS4(:,:,3) )));
-    RGB(:,:,2) = ( 255*imadjust( mat2gray( MS4(:,:,2) )));
-    RGB(:,:,3) = ( 255*imadjust( mat2gray( MS4(:,:,1) )));
+    MS4 = single(MS4)/10000;
     
-    imwrite( uint8(RGB), [TileDir '\' outputfbase '_RGB.jpg']);
+%     NDVIValue = ( MS4(:,:,4)- MS4(:,:,3) )./ ...
+%         (MS4(:,:,4) + MS4(:,:,3) );
+%     NDVIFileName = [TileDir '\' outputfbase '_NDVI.tif'];
+%     trgt.Z = (NDVIValue);
+%     GRIDobj2geotiff(trgt,NDVIFileName);
+%     
+%     EVIValue = 2.5*( MS4(:,:,4) - MS4(:,:,3) )./ ...
+%         ( MS4(:,:,4) + 6*MS4(:,:,3)  -7.5* MS4(:,:,1) + 1);
+%     EVIFileName = [TileDir '\' outputfbase '_EVI.tif'];
+%     trgt.Z = (EVIValue);
+%     GRIDobj2geotiff(trgt,EVIFileName);
+% 
+%     
+%     MSAVIValue = (2 * MS4(:,:,4)+ 1 - ...
+%         sqrt ((2 * MS4(:,:,4) + 1).^2 - 8 * (MS4(:,:,4) - MS4(:,:,3)))) / 2;
+%     MSAVIFileName = [TileDir '\' outputfbase '_MSAVI.tif'];
+%     trgt.Z = (MSAVIValue);
+%     GRIDobj2geotiff(trgt,MSAVIFileName);
     
-    NRG(:,:,1) = ( 255*imadjust( mat2gray( MS4(:,:,4) )));
-    NRG(:,:,2) = ( 255*imadjust( mat2gray( MS4(:,:,3) )));
-    NRG(:,:,3) = ( 255*imadjust( mat2gray( MS4(:,:,2) )));
     
-    imwrite( uint8(NRG), [TileDir '\' outputfbase '_NRG.jpg']);
+%     
+%     NDWIValue = ( single(data_toabt.BandGreen) - single(data_toabt.BandNIR8) )./ ...
+%         ( single(data_toabt.BandNIR8) + single(data_toabt.BandRed) );
+%     NDWIFileName = [TileDir '\' outputfbase '_NDWI.tif'];
+%     trgt.Z = (NDWIValue);
+%     GRIDobj2geotiff(trgt,NDWIFileName);
+%     
+%     MIValue = ( single(data_toabt.BandNIR) - single(data_toabt.BandSWIR1) )./ ...
+%         ( single(data_toabt.BandNIR) + single(data_toabt.BandSWIR1) );
+%     MIFileName = [TileDir '\' outputfbase '_MI.tif'];
+%     trgt.Z = (MIValue);
+%     GRIDobj2geotiff(trgt,MIFileName);
+    
+    %     RGB(:,:,1) = ( 255*imadjust( mat2gray( MS4(:,:,3) )));
+    %     RGB(:,:,2) = ( 255*imadjust( mat2gray( MS4(:,:,2) )));
+    %     RGB(:,:,3) = ( 255*imadjust( mat2gray( MS4(:,:,1) )));
+    %
+    %     imwrite( uint8(RGB), [TileDir '\' outputfbase '_RGB.jpg']);
+    %
+    %     NRG(:,:,1) = ( 255*imadjust( mat2gray( MS4(:,:,4) )));
+    %     NRG(:,:,2) = ( 255*imadjust( mat2gray( MS4(:,:,3) )));
+    %     NRG(:,:,3) = ( 255*imadjust( mat2gray( MS4(:,:,2) )));
+    %
+    %     imwrite( uint8(NRG), [TileDir '\' outputfbase '_NRG.jpg']);
+    
+    RGB(:,:,1) = ( uint8( 255*( MS4(:,:,3) )));
+    RGB(:,:,2) = ( uint8( 255*( MS4(:,:,2) )));
+    RGB(:,:,3) = ( uint8( 255*( MS4(:,:,1) )));
+    
+    imwrite( uint8(2*RGB), [TileDir '\' outputfbase '_RGB.jpg']);
+    
+    NRG(:,:,1) = ( uint8( 255*( MS4(:,:,4) )));
+    NRG(:,:,2) = ( uint8( 255*( MS4(:,:,3) )));
+    NRG(:,:,3) = ( uint8( 255*( MS4(:,:,2) )));
+    
+    imwrite( uint8(2*NRG), [TileDir '\' outputfbase '_NRG.jpg']);
     
     time=toc;
     time=time/60;
