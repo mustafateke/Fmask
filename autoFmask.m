@@ -58,7 +58,7 @@ tic
 %     path_data=pwd;
 % end
 path_data=varargin{2};
-
+filepath_work = varargin{4};
 
 %% get parameters from inputs
 p = inputParser;
@@ -101,6 +101,7 @@ if( exist( fmask_output, 'file')  == 0)
     addParameter(p,'udem','');
     addParameter(p,'path','');
     addParameter(p,'path_data','');
+    addParameter(p,'filepath_work','');
     % request user's input
     parse(p,varargin{:});
     resolution=p.Results.resolution;
@@ -264,7 +265,7 @@ if( exist( fmask_output, 'file')  == 0)
     % datefname = [num2str(vekdate(1)) num2str(vekdate(2), '%02d'), num2str(vekdate(3), '%02d') ];
     % outputfbase = [TileName '_' datefname];
     % fmask_output = fullfile( filepath_work, Folder, [main_meta.name '_FMask.tif']);
-    fmask_output = [TileDir '\' outputfbase '_FMask.png'];
+    fmask_output = [TileDir '\' outputfbase '_FMask.png']
     if( exist( TileDir)  ~= 7)
         mkdir( TileDir );
     end

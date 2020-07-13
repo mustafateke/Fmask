@@ -6,9 +6,11 @@ global filepath_work;
     fprintf('Fmask 4.0 batch starts ...\n');
     filepath_work = pwd; % CD to the path; or, type in the path of your working directory here.
     [~, ~, paths, ~] = CheckImagesPath(filepath_work);
+    delete(gcp('nocreate'))
+    parpool(3)
     parfor i=1: length(paths)
 %         cd(paths{i});
         fprintf('At %s.\n',paths{i});
-        autoFmask('path_data', paths{i});% 4.0
+        autoFmask('path_data', paths{i}, 'filepath_work', filepath_work);% 4.0
     end
 end
